@@ -1,37 +1,61 @@
-import streamlit as st #pip install streamlit
-import cv2 #pip install opencv-python
-from PIL import Image
+import streamlit as st
+from PIL import Image, ImageDraw
 import numpy as np
 from collections import Counter
 
-def get_hex_color_codes(image):
-    image = np.array(image.convert('RGB'))  # Arka planı olmayan resimler için
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    resized_image = cv2.resize(image, (40, 40), interpolation=cv2.INTER_AREA)
-    pil_image = Image.fromarray(cv2.cvtColor(resized_image, cv2.COLOR_BGR2RGB))
+def get_hex_color_codes(image, area, num_colors=20):
+    # Resmin işlenecek alanını kes
+    cropped_image = image.crop(area)
+    # Resmi numpy dizisine dönüştür
+    np_image = np.array(cropped_image)
+    # Tüm pikselleri (w, h, 3) şeklinde düzleştir
+    pixels = np_image.reshape(-1, np_image.shape[-1])
+    # En yaygın renkleri say
+    counts = Counter(map(tuple, pixels))
+    # En sık kullanılan renkleri al
+    most_common = counts.most_common(num_colors)
 
-    colors = pil_image.getcolors(40*40)
-    total_pixels = sum(count for color, count in colors)
-    color_counts = Counter({'#{:02x}{:02x}{:02x}'.format(*color[1]): color[0] for color in colors})
-    most_common_colors = color_counts.most_common(20)
-    return [(color[0], color[1] / total_pixels * 100) for color in most_common_colors]
+    hex_colors = []
+    for color, count in most_common:
+        # RGB'den HEX'e dönüştür
+        hex_color = '#{:02x}{:02x}{:02x}'.format(*color)
+        # Renklerin oranını hesapla
+        percentage = (count / len(pixels)) * 100
+        hex_colors.append({'hex': hex_color, 'percentage': percentage})
 
-def display_color(hex_color, percentage):
-    st.markdown(
-        f"<div style='display: inline-block; margin: 10px; padding: 10px; background-color: {hex_color}; color: white; border-radius: 5px;'>{hex_color} - {percentage:.2f}%</div>",
-        unsafe_allow_html=True)
+    return hex_colors
+
+def display_colors(hex_colors):
+    for color in hex_colors:
+        st.markdown(
+            f"<div style='display: inline-flex; align-items: center; justify-content: center; width: 100px; height: 50px; background-color: {color['hex']}; color: #fff; margin: 10px; border-radius: 10px;'>{color['hex']}<br>({color['percentage']:.2f}%)</div>",
+            unsafe_allow_html=True)
+
+def highlight_processed_area(image, area):
+    """ İşlenen alanı göstermek için resmin üzerine bir dikdörtgen çizer. """
+    draw = ImageDraw.Draw(image)
+    draw.rectangle(area, outline='red', width=3)
+    return image
 
 def main():
     st.title("Resimden Hex Renk Kodu Çıkarıcı")
     uploaded_file = st.file_uploader("Bir resim dosyası yükle (PNG, JPEG, JPG)", type=["png", "jpeg", "jpg"])
 
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        hex_codes = get_hex_color_codes(image)
-        st.write("En Sık Bulunan 20 Hex Renk Kodu ve Yüzdelikleri:")
-        for hex_color, percentage in hex_codes:
-            display_color(hex_color, percentage)
-        st.image(image, caption='Yüklenen Resim', use_column_width=True)
+        image = Image.open(uploaded_file).convert('RGB')
+
+        # İşlenecek alanın koordinatları (örnek: resmin orta kısmı)
+        processed_area = (40, 40, 100, 100)
+
+        # İşlenen alanı vurgulayın
+        image_with_highlight = highlight_processed_area(image.copy(), processed_area)
+
+        hex_codes = get_hex_color_codes(image, processed_area)
+        st.write("En Sık Bulunan 20 Hex Renk Kodu:")
+        display_colors(hex_codes)
+
+        # Yüklenen ve işlenen resmi göster
+        st.image(image_with_highlight, caption='İşlenen Alanı Vurgulanan Resim', use_column_width=True)
 
 if __name__ == "__main__":
     main()
