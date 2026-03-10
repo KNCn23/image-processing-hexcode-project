@@ -1,5 +1,11 @@
-# Image prossesing with hexcodes
+# 🖼️ Image Processing Hex-Code (Görüntü İşleme ve Hex Kod Analizi)
 
-### 🖥️ Mission
-- Digital design was developed to make the work of graphic workers easier.
-- Find the hex code from the photo taken and print it on the screen to support desingers.
+[TR] Görüntü işleme teknikleri kullanarak piksellerden hex kod analizi yapan bir Python projesi.
+
+[EN] A Python project performing hex code analysis from pixels using various image processing techniques.
+
+## 🛠️ Tech / Teknolojiler
+- Python, OpenCV, NumPy
+
+## 🚀 Run / Çalıştır
+`python main.py`
